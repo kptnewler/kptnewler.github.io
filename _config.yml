@@ -103,8 +103,6 @@ theme: landscape
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repository: https://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@github.com/kptnewler/newler.github.io
+  repository: git@github.com:kptnewler/newler.github.io.git
   branch: master
   message: Site updated {{ now('YYYY-MM-DD HH:mm:ss') }}
-  token: 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
-
