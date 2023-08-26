@@ -3,9 +3,9 @@ on:
   push:
     branches:
       - hexo # 默认监听 hexo 分支，可根据实际情况修改
-env:
-  GIT_USER: kptnewler
-  GIT_EMAIL: ${{secrets.GITHUBEMAIL}}
+  env:
+    GIT_USER: kptnewler
+    GIT_EMAIL: ${{secrets.GITHUBEMAIL}}
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -35,8 +35,8 @@ jobs:
           echo "$SSH_PRIVATE" > ~/.ssh/id_rsa
           chmod 700 -R ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          git config --global user.email $GIT_EMAIL
-          git config --global user.name $GIT_USER
+          git config --global user.email "673893702@qq.com"
+          git config --global user.name "kptnewler"
       - name: Hexo Genera
         run: |
           hexo clean
