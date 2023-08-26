@@ -1,5 +1,5 @@
 ---
-title: http协议
+title: Http介绍
 date: 2023-08-26 11:19:37
 tags: 
 - http 
@@ -7,6 +7,8 @@ tags:
 categories: 
 - 计算机网络
 ---
+
+<meta name="referrer" content="no-referrer" />
 
 # HTTP协议介绍
 
@@ -45,8 +47,7 @@ HTTP报文可以分为请求报文和响应报文两类。
 响应报文是服务端给客户端的响应的HTTP报文，包含服务端响应的信息。
 
 下面依次介绍HTTP报文的组成部分。
-![HTTP报文组成](https://upload-images.jianshu.io/upload_images/4538003-a36292233456cbe4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-
+![HTTP报文组成](https://cdn.jsdelivr.net/gh/kptnewler/blog-image/blogs/picture/20230826165411.png)
 ### 起始行
 
 起始行可以根据HTTP请求报文和响应报文分成，请求行和响应行。
