@@ -23,7 +23,6 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install hexo-cli -g
-          npm i hexo-renderer-swig
           npm install
       - name: Add KEY
         env:
