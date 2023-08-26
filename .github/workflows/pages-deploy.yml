@@ -28,4 +28,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           branch: master # GitHub Pages 的分支
-          folder: public # hexo generate 生成的静态文件存放的目录
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
