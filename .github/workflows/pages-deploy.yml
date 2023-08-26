@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - hexo # 默认监听 hexo 分支，可根据实际情况修改
-  env:
-    GIT_USER: kptnewler
-    GIT_EMAIL: ${{secrets.GITHUBEMAIL}}
 jobs:
   deploy:
     runs-on: ubuntu-latest
