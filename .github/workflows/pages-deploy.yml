@@ -21,11 +21,11 @@ jobs:
           restore-keys: |
             ${{ runner.OS }}-node-
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
       - name: Build
-        run: npx hexo generate
+        run: npm run build
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@4.1.5
+        uses: peaceiris/actions-gh-pages@v3
         with:
           branch: master # GitHub Pages 的分支
           folder: public # hexo generate 生成的静态文件存放的目录
