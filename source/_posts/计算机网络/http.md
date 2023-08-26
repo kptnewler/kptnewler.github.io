@@ -1,7 +1,11 @@
 ---
 title: http协议
 date: 2023-08-26 11:19:37
-tags:
+tags: 
+- http 
+- 计算机网络
+categories: 
+- 计算机网络
 ---
 
 # HTTP协议介绍
