@@ -37,6 +37,6 @@ jobs:
       - name: Hexo Genera
         run: |
           hexo clean
-          hexo genera
+          hexo genera --debug
       - name: Hexo Deploy
         run: hexo deploy
