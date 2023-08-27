@@ -34,6 +34,8 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           git config --global user.email "673893702@qq.com"
           git config --global user.name "kptnewler"
+      - name: next config
+        run: git clone git@github.com:next-theme/hexo-theme-next.git themes/next
       - name: Hexo Genera
         run: |
           hexo clean
