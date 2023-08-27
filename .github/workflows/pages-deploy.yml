@@ -22,8 +22,8 @@ jobs:
             ${{ runner.OS }}-node-
       - name: Install Dependencies
         run: |
-          npm install hexo-cli -g
-          npm install
+          npm install hexo-cli -g 
+          npm install hexo --save
       - name: Add KEY
         env:
           SSH_PRIVATE: ${{ secrets.SSH_PRIVATE }}
