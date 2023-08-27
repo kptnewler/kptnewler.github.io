@@ -23,6 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install hexo-cli -g 
+          npm install hexo-theme-next
           npm install hexo --save
       - name: Add KEY
         env:
@@ -39,6 +40,6 @@ jobs:
       - name: Hexo Genera
         run: |
           hexo clean
-          hexo genera --debug
+          hexo g --debug
       - name: Hexo Deploy
-        run: hexo deploy
+        run: hexo d
