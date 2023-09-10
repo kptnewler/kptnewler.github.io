@@ -25,7 +25,7 @@ OkHttp是一个高效的客户端 Http 请求框架，OkHttp 是对 HTTP 协议�
 
 
 
-## OkHttp 的使用
+# OkHttp 的使用
 
 OkHttpClient是 HTTP 协议中的**请求方**，使用 HTTP 协议获取网络上的各种资源，简单称为客户端，角色和浏览器一样。
 
@@ -293,13 +293,13 @@ writeTimeout：发起请求并被目标服务器接受的超时时间。有时�
 
 
 
-## 请求流程
+# 请求流程
 
 整个OkHttp 请求主流程 靠分发器 和 拦截器 ，其他组件配合两者。
 
 分发器Dispatcher：负责调配请求任务，内部包含一个线程池执行请求任务，对总请求数和单主机请求数有限制。
 
-### 一、请求任务分配
+## 一、请求任务分配
 
 `okClient.newCall(request)` 返回的是 `RealCall` 类型。下面调用`realCall.enqueue(callback)`。
 
@@ -517,7 +517,7 @@ private fun <T> finished(calls: Deque<T>, call: T) {
 }
 ```
 
-### 二、拦截器责任链
+## 二、拦截器责任链
 
 OkHttp 的核心工作是在 `getResponseWithInterceptorChain()` 中完成。
 
@@ -601,12 +601,15 @@ private val index: Int    override fun proceed(request: Request): Response {
 
 下面看看具体每个拦截器的作用，整个拦截器链按照Interceptor添加顺序依次调用`intercept()`方法。
 
+### 一次完整网络请求
+在开始之前，我们要知道从客户端将网址输入到浏览器，一次完整的网络请求会发生什么。
 
-#### 1、自定义Interceptor
+
+### 1、自定义Interceptor
 
 先执行开发者调用`OkHttpClient.Builder().addInterceptor()`添加的自定义拦截器，它在系统拦截器之前工作，进行最早的Request预处理工作，已经最后处理响应结果Response，可以根据需要添加header。
 
-#### 2、重试及重定向拦截器RetryAndFollowUpInterceptor
+### 2、重试及重定向拦截器RetryAndFollowUpInterceptor
 
 **它会对连接做⼀些初始化⼯作，并且负责在请求失败时的重试，以及重定向的⾃动后续请求**。它的存在，可以让重试和重定向对于开发者是无感知。
 
@@ -698,23 +701,49 @@ override fun intercept(chain: Interceptor.Chain): Response {
 ```
 
 
-
-##### enterNetworkInterceptorExchange()初始化
+#### enterNetworkInterceptorExchange()初始化
 
 Exchange 表示请求- 响应一次数据交换，只有建立连接才能数据交换。
 
 ExchangeFinder 的作用就是将寻找可重用的连接，此类的实例不是线程安全的。
 
-```java
-fun enterNetworkInterceptorExchange(request: Request, newExchangeFinder: Boolean) {  
-    ...  
-    if (newExchangeFinder) {    
-        this.exchangeFinder = ExchangeFinder(connectionPool, createAddress(request.url),this,eventListener) 
+1. 先检查上次连接是否已经关闭，没有关闭直接抛出一个异常
+2. 创建 `RealRoutePlanner` 选择和建立一个可用连接，调用 `createAddress()` 将核心信息保存下来。
+3. `client.fastFallback` 默认为 true，所以会创建`FastFallbackExchangeFinder` 对象。
+这些初始化信息是为了后面网络连接使用。
+
+```kotlin
+// RealCall
+  fun enterNetworkInterceptorExchange(
+    request: Request,
+    newRoutePlanner: Boolean = true,
+    chain: RealInterceptorChain,
+) {
+    check(interceptorScopedExchange == null)
+
+    synchronized(this) {
+        check(!responseBodyOpen) {
+            "cannot make a new request because the previous response is still open: " +
+                    "please call response.close()"
+        }
+        check(!requestBodyOpen)
+    }
+
+    if (newRoutePlanner) {
+        val routePlanner = RealRoutePlanner(
+            client,
+            createAddress(request.url),
+            this,
+            chain,
+            connectionListener = connectionPool.connectionListener
+        )
+        this.exchangeFinder = when {
+            client.fastFallback -> FastFallbackExchangeFinder(routePlanner, client.taskRunner)
+            else -> SequentialExchangeFinder(routePlanner)
+        }
     }
 }
 ```
-
-
 
 ##### recover请求重试
 
@@ -840,14 +869,22 @@ private fun followUpRequest(userResponse: Response, exchange: Exchange?): Reques
 ```
 
 
-
-### 3、 桥接拦截器BridgeInterceptor
+### 3、桥接拦截器BridgeInterceptor
 
 它负责为请求添加一些开发者不需要手动添加，但服务端需要的请求字段，加载保存的cookie。
 
-如果有请求实体，添加`Content-Type`、`Content-Length`，另外再加上`Host`、`Connection:Keep-Alive`、`User-Agent`等常用请求头字段。
+请求头，一般实际开发中配合 Retrofit 注解配合构建 RequestBody:
+1. 请求实体 RequestBody 有 content-type，header 添加 `Content-Type`。
+2. 请求实体有 content-length 大小，header 添加 `Content-Length`，没有值添加 `Transfer-Encoding:chunked`，分块传输，它两互斥。
+3. header 添加 `host`, 把 url 中的域名部分作为 host。
+4. header 添加 `Connection:Keep-Alive`，保证单次请求后连接不断开。
+5. 如果不是范围请求，header 默认添加 `Accept-Encoding:gzip` 支持服务器资源 gzip 压缩。
+6. 有 cookie header 添加 `Cookie` 信息。
+7. header 添加 `User-Agent:okhttp/${CONST_VERSION}`。
 
-获取响应后，会用CookieJar保存服务器返回的cookie，如果使用`gzip`返回数据，则使用`GzipSource`用于解压。
+获取响应后，解析响应头:
+1. 响应头有`Set-Cookie`，会用 CookieJar 保存服务器返回的cookie。
+2. 响应头有`Content-Encoding:gzip` 且根据`networkResponse.promisesBody()`服务端有返回压缩实体，则使用`GzipSource`用于解压。
 
 ```kotlin
 override fun intercept(chain: Interceptor.Chain): Response {
@@ -928,7 +965,6 @@ override fun intercept(chain: Interceptor.Chain): Response {
 ### 4、缓存拦截器CacheInterceptor
 
 负责HTTP的缓存处理，在建立连接发出请求前，先判断是否存在本地响应结果缓存，如果存在可以直接返回不请求服务器。，
-
 
 
 ```kotlin
