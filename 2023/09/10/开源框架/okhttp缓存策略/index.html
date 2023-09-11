@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.18.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="在 okhttp 责任链中在建立网络连接之前有个 CacheInterceptor 负责缓存相关。okhttp 实现了 http 协议的所有缓存策略和缓存字段的解析。 在请求之前先调用 CacheStrategy.Factory(now, chain.request(), cacheCandidate).compute() 获取缓存策略。 12345678910111213141516val">
+<meta property="og:type" content="article">
+<meta property="og:title" content="okhttp缓存策略介绍">
+<meta property="og:url" content="http://example.com/2023/09/10/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/okhttp%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="在 okhttp 责任链中在建立网络连接之前有个 CacheInterceptor 负责缓存相关。okhttp 实现了 http 协议的所有缓存策略和缓存字段的解析。 在请求之前先调用 CacheStrategy.Factory(now, chain.request(), cacheCandidate).compute() 获取缓存策略。 12345678910111213141516val">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2023-09-10T15:35:14.000Z">
+<meta property="article:modified_time" content="2023-09-11T11:02:55.898Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2023/09/10/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/okhttp%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2023/09/10/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/okhttp%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5/","path":"2023/09/10/开源框架/okhttp缓存策略/","title":"okhttp缓存策略介绍"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>okhttp缓存策略介绍 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Hexo</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.</span> <span class="nav-text">初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CacheStrategy-%E5%A4%84%E7%90%86%E7%BC%93%E5%AD%98"><span class="nav-number">2.</span> <span class="nav-text">CacheStrategy 处理缓存</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%AF%E5%90%A6%E5%8F%AF%E4%BB%A5%E7%BC%93%E5%AD%98"><span class="nav-number">2.1.</span> <span class="nav-text">是否可以缓存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A4%E6%96%AD%E6%98%AF%E5%90%A6%E6%9C%89%E6%9D%A1%E4%BB%B6%E8%AF%B7%E6%B1%82"><span class="nav-number">2.2.</span> <span class="nav-text">判断是否有条件请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B9%E6%8D%AE%E8%B5%84%E6%BA%90%E4%BF%9D%E8%B4%A8%E6%9C%9F%E5%92%8C%E7%BC%93%E5%AD%98%E6%97%B6%E9%97%B4"><span class="nav-number">2.3.</span> <span class="nav-text">根据资源保质期和缓存时间</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E7%BC%93%E5%AD%98%E6%97%B6%E9%97%B4"><span class="nav-number">2.3.1.</span> <span class="nav-text">资源缓存时间</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E4%BF%9D%E8%B4%A8%E6%9C%9F"><span class="nav-number">2.3.2.</span> <span class="nav-text">资源保质期</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#minFreshMillis"><span class="nav-number">2.3.3.</span> <span class="nav-text">minFreshMillis</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#maxStaleMillis"><span class="nav-number">2.3.4.</span> <span class="nav-text">maxStaleMillis</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%93%8D%E5%BA%94%E7%BC%93%E5%AD%98"><span class="nav-number">3.</span> <span class="nav-text">响应缓存</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/09/10/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/okhttp%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="okhttp缓存策略介绍 | Hexo">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          okhttp缓存策略介绍
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-09-10 15:35:14" itemprop="dateCreated datePublished" datetime="2023-09-10T15:35:14+00:00">2023-09-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-09-11 11:02:55" itemprop="dateModified" datetime="2023-09-11T11:02:55+00:00">2023-09-11</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer" />
+
+<p>在 okhttp 责任链中在建立网络连接之前有个 CacheInterceptor 负责缓存相关。<br>okhttp 实现了 http 协议的所有缓存策略和缓存字段的解析。</p>
+<p>在请求之前先调用 <code>CacheStrategy.Factory(now, chain.request(), cacheCandidate).compute()</code> 获取缓存策略。</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> call = chain.call()</span><br><span class="line"><span class="keyword">val</span> cacheCandidate = cache?.<span class="keyword">get</span>(chain.request())</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> now = System.currentTimeMillis()</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> strategy = CacheStrategy.Factory(now, chain.request(), cacheCandidate).compute()</span><br><span class="line"><span class="keyword">val</span> networkRequest = strategy.networkRequest</span><br><span class="line"><span class="keyword">val</span> cacheResponse = strategy.cacheResponse</span><br><span class="line"></span><br><span class="line">cache?.trackResponse(strategy)</span><br><span class="line"><span class="keyword">val</span> listener = (call <span class="keyword">as</span>? RealCall)?.eventListener ?: EventListener.NONE</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (cacheCandidate != <span class="literal">null</span> &amp;&amp; cacheResponse == <span class="literal">null</span>) &#123;</span><br><span class="line">  <span class="comment">// The cache candidate wasn&#x27;t applicable. Close it.</span></span><br><span class="line">  cacheCandidate.body.closeQuietly()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>缓存策略实现逻辑在 <code>CacheStrategy</code> 类中。<br>缓存信息实现逻辑和容器在 <code>Cache</code> 类中。</p>
+<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>在初始化的时候，如果有缓存响应，则从响应头中依次取出:</p>
+<ul>
+<li>Date, 服务器的时间。</li>
+<li>Expires，过期时间。</li>
+<li>Last-Modified: 资源被修改的日期，用于条件请求。</li>
+<li>ETag: 客户端资源唯一标识，主要是用来解决修改时间无法准确区分文件变化的问题，用于条件请求。</li>
+<li>Age: 资源在缓存中存在的时间。<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// CacheStrategy.Factory()</span></span><br><span class="line">    <span class="keyword">init</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (cacheResponse != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">this</span>.sentRequestMillis = cacheResponse.sentRequestAtMillis</span><br><span class="line">        <span class="keyword">this</span>.receivedResponseMillis = cacheResponse.receivedResponseAtMillis</span><br><span class="line">        <span class="keyword">val</span> headers = cacheResponse.headers</span><br><span class="line">        <span class="keyword">for</span> (i <span class="keyword">in</span> <span class="number">0</span> until headers.size) &#123;</span><br><span class="line">          <span class="keyword">val</span> fieldName = headers.name(i)</span><br><span class="line">          <span class="keyword">val</span> value = headers.value(i)</span><br><span class="line">          <span class="keyword">when</span> &#123;</span><br><span class="line">            fieldName.equals(<span class="string">&quot;Date&quot;</span>, ignoreCase = <span class="literal">true</span>) -&gt; &#123;</span><br><span class="line">              servedDate = value.toHttpDateOrNull()</span><br><span class="line">              servedDateString = value</span><br><span class="line">            &#125;</span><br><span class="line">            fieldName.equals(<span class="string">&quot;Expires&quot;</span>, ignoreCase = <span class="literal">true</span>) -&gt; &#123;</span><br><span class="line">              expires = value.toHttpDateOrNull()</span><br><span class="line">            &#125;</span><br><span class="line">            fieldName.equals(<span class="string">&quot;Last-Modified&quot;</span>, ignoreCase = <span class="literal">true</span>) -&gt; &#123;</span><br><span class="line">              lastModified = value.toHttpDateOrNull()</span><br><span class="line">              lastModifiedString = value</span><br><span class="line">            &#125;</span><br><span class="line">            fieldName.equals(<span class="string">&quot;ETag&quot;</span>, ignoreCase = <span class="literal">true</span>) -&gt; &#123;</span><br><span class="line">              etag = value</span><br><span class="line">            &#125;</span><br><span class="line">            fieldName.equals(<span class="string">&quot;Age&quot;</span>, ignoreCase = <span class="literal">true</span>) -&gt; &#123;</span><br><span class="line">              ageSeconds = value.toNonNegativeInt(-<span class="number">1</span>)</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p><code>computeCandidate()</code> 是计算缓存策略的核心逻辑</p>
+<p><code>Cache-Controller: only-if-cached</code> 只能用缓存，条件请求不为空，则直接返回 null。 </p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">compute</span><span class="params">()</span></span>: CacheStrategy &#123;</span><br><span class="line">    <span class="keyword">val</span> candidate: CacheStrategy = computeCandidate()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// We&#x27;re forbidden from using the network and the cache is insufficient.</span></span><br><span class="line">    <span class="keyword">if</span> (candidate.networkRequest != <span class="literal">null</span> &amp;&amp; request.cacheControl.onlyIfCached) &#123;</span><br><span class="line">        <span class="keyword">return</span> CacheStrategy(<span class="literal">null</span>, <span class="literal">null</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> candidate</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="CacheStrategy-处理缓存"><a href="#CacheStrategy-处理缓存" class="headerlink" title="CacheStrategy 处理缓存"></a>CacheStrategy 处理缓存</h2><p>主要看 <code>compute()</code> 里面处理逻辑，分为好几块。</p>
+<h3 id="是否可以缓存"><a href="#是否可以缓存" class="headerlink" title="是否可以缓存"></a>是否可以缓存</h3><ol>
+<li>判断 response code 是否符合条件</li>
+<li>请求头是否有 Cache-Controller:max-age、private、public 和 Expires:value，没有直接当不需要缓存。<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (!isCacheable(cacheResponse, request)) &#123;</span><br><span class="line">    <span class="keyword">return</span> CacheStrategy(request, <span class="literal">null</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="判断是否有条件请求"><a href="#判断是否有条件请求" class="headerlink" title="判断是否有条件请求"></a>判断是否有条件请求</h3><ol>
+<li>如果缓存的 request 是条件请求，那么下次</li>
+<li>Cache-Control:no-cache，表示没有任何缓存。<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> requestCaching = request.cacheControl</span><br><span class="line"><span class="keyword">if</span> (requestCaching.noCache || hasConditions(request)) &#123;</span><br><span class="line">    <span class="keyword">return</span> CacheStrategy(request, <span class="literal">null</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>如果没有条件请求头，但是缓存的响应头有条件请求的参数，根据请求参数生成条件请求头。</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> conditionName: String</span><br><span class="line"><span class="keyword">val</span> conditionValue: String?</span><br><span class="line"><span class="keyword">when</span> &#123;</span><br><span class="line">  etag != <span class="literal">null</span> -&gt; &#123;</span><br><span class="line">    conditionName = <span class="string">&quot;If-None-Match&quot;</span></span><br><span class="line">    conditionValue = etag</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  lastModified != <span class="literal">null</span> -&gt; &#123;</span><br><span class="line">    conditionName = <span class="string">&quot;If-Modified-Since&quot;</span></span><br><span class="line">    conditionValue = lastModifiedString</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  servedDate != <span class="literal">null</span> -&gt; &#123;</span><br><span class="line">    conditionName = <span class="string">&quot;If-Modified-Since&quot;</span></span><br><span class="line">    conditionValue = servedDateString</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">else</span> -&gt; <span class="keyword">return</span> CacheStrategy(request, <span class="literal">null</span>) <span class="comment">// No condition! Make a regular request.</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="根据资源保质期和缓存时间"><a href="#根据资源保质期和缓存时间" class="headerlink" title="根据资源保质期和缓存时间"></a>根据资源保质期和缓存时间</h3><h4 id="资源缓存时间"><a href="#资源缓存时间" class="headerlink" title="资源缓存时间"></a>资源缓存时间</h4><p>ageMillis 表示资源已经缓存的时间，分成 3 部分，3 者相加即为资源缓存时间，因为资源可能在缓存服务器上或者 age&#x3D;null &amp;&amp; data &#x3D; null，导致 receivedAge 为空。<br>虽然当 receivedAge 不为 0 时，前两点可能时间重合，但是为了防止用了过期的资源，这样计算最保险。</p>
+<ul>
+<li>receivedAge，资源运输过程的损耗时间。</li>
+<li>responseDuration，客户端请求响应时间，一个 RTT。</li>
+<li>residentDuration，资源本地缓存时间。</li>
+</ul>
+<h4 id="资源保质期"><a href="#资源保质期" class="headerlink" title="资源保质期"></a>资源保质期</h4><p>freshMillis 保质期时间，服务端可能提供多个保质期，根据优先级，保质期计算公式主要是前两点。</p>
+<ul>
+<li>Cache-Controller 的 mag-age 优先级最高，返回值就是保质期。</li>
+<li>Expires 过期时间，当前时间 - Expires，计算得出保质期。</li>
+<li>Last-Modified， 如果资源的最后修改时间确定且没有查询参数，资源到达客户端时间 - 最后修改时间 的 10% 作为保质期。</li>
+</ul>
+<h4 id="minFreshMillis"><a href="#minFreshMillis" class="headerlink" title="minFreshMillis"></a>minFreshMillis</h4><p>Cache-Controller 的 min-fresh，最小新鲜时间，即保质期时间提前了多久了。</p>
+<h4 id="maxStaleMillis"><a href="#maxStaleMillis" class="headerlink" title="maxStaleMillis"></a>maxStaleMillis</h4><p>Cache-Controller 的 max-stale 最大过期时间，即保质期时间延长多久。</p>
+<p>最终计算方法 缓存时间 &lt; 保质期 即可以使用缓存<br>ageMillis &lt; freshMillis + maxStaleMillis - minFreshMillis</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> responseCaching = cacheResponse.cacheControl</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> ageMillis = cacheResponseAge()</span><br><span class="line"><span class="keyword">var</span> freshMillis = computeFreshnessLifetime()</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (requestCaching.maxAgeSeconds != -<span class="number">1</span>) &#123;</span><br><span class="line">  freshMillis = minOf(freshMillis, SECONDS.toMillis(requestCaching.maxAgeSeconds.toLong()))</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> minFreshMillis: <span class="built_in">Long</span> = <span class="number">0</span></span><br><span class="line"><span class="keyword">if</span> (requestCaching.minFreshSeconds != -<span class="number">1</span>) &#123;</span><br><span class="line">  minFreshMillis = SECONDS.toMillis(requestCaching.minFreshSeconds.toLong())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> maxStaleMillis: <span class="built_in">Long</span> = <span class="number">0</span></span><br><span class="line"><span class="keyword">if</span> (!responseCaching.mustRevalidate &amp;&amp; requestCaching.maxStaleSeconds != -<span class="number">1</span>) &#123;</span><br><span class="line">  maxStaleMillis = SECONDS.toMillis(requestCaching.maxStaleSeconds.toLong())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!responseCaching.noCache &amp;&amp; ageMillis + minFreshMillis &lt; freshMillis + maxStaleMillis) &#123;</span><br><span class="line">  <span class="keyword">val</span> builder = cacheResponse.newBuilder()</span><br><span class="line">  <span class="keyword">if</span> (ageMillis + minFreshMillis &gt;= freshMillis) &#123;</span><br><span class="line">    builder.addHeader(<span class="string">&quot;Warning&quot;</span>, <span class="string">&quot;110 HttpURLConnection \&quot;Response is stale\&quot;&quot;</span>)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">val</span> oneDayMillis = <span class="number">24</span> * <span class="number">60</span> * <span class="number">60</span> * <span class="number">1000L</span></span><br><span class="line">  <span class="keyword">if</span> (ageMillis &gt; oneDayMillis &amp;&amp; isFreshnessLifetimeHeuristic()) &#123;</span><br><span class="line">    builder.addHeader(<span class="string">&quot;Warning&quot;</span>, <span class="string">&quot;113 HttpURLConnection \&quot;Heuristic expiration\&quot;&quot;</span>)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> CacheStrategy(<span class="literal">null</span>, builder.build())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="响应缓存"><a href="#响应缓存" class="headerlink" title="响应缓存"></a>响应缓存</h2><p>如果条件请求，服务端返回 304 表示资源为修改，则可以直接使用缓存响应。</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (cacheResponse != <span class="literal">null</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (networkResponse?.code == HTTP_NOT_MODIFIED) &#123;</span><br><span class="line">    <span class="keyword">val</span> response = cacheResponse.newBuilder()</span><br><span class="line">        .headers(combine(cacheResponse.headers, networkResponse.headers))</span><br><span class="line">        .sentRequestAtMillis(networkResponse.sentRequestAtMillis)</span><br><span class="line">        .receivedResponseAtMillis(networkResponse.receivedResponseAtMillis)</span><br><span class="line">        .cacheResponse(cacheResponse.stripBody())</span><br><span class="line">        .networkResponse(networkResponse.stripBody())</span><br><span class="line">        .build()</span><br><span class="line"></span><br><span class="line">    networkResponse.body.close()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Update the cache after combining headers but before stripping the</span></span><br><span class="line">    <span class="comment">// Content-Encoding header (as performed by initContentStream()).</span></span><br><span class="line">    cache!!.trackConditionalCacheHit()</span><br><span class="line">    cache.update(cacheResponse, response)</span><br><span class="line">    <span class="keyword">return</span> response.also &#123;</span><br><span class="line">      listener.cacheHit(call, it)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    cacheResponse.body.closeQuietly()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>响应满足缓存条件，则添加到缓存中。</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (cache != <span class="literal">null</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (response.promisesBody() &amp;&amp; CacheStrategy.isCacheable(response, networkRequest)) &#123;</span><br><span class="line">    <span class="comment">// Offer this request to the cache.</span></span><br><span class="line">    <span class="keyword">val</span> cacheRequest = cache.put(response)</span><br><span class="line">    <span class="keyword">return</span> cacheWritingResponse(cacheRequest, response).also &#123;</span><br><span class="line">      <span class="keyword">if</span> (cacheResponse != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="comment">// This will log a conditional cache miss only.</span></span><br><span class="line">        listener.cacheMiss(call)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (HttpMethod.invalidatesCache(networkRequest.method)) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      cache.remove(networkRequest)</span><br><span class="line">    &#125; <span class="keyword">catch</span> (_: IOException) &#123;</span><br><span class="line">      <span class="comment">// The cache cannot be written.</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/09/09/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/okhttp%E4%BB%8B%E7%BB%8D/" rel="prev" title="okhttp介绍">
+                  <i class="fa fa-angle-left"></i> okhttp介绍
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">John Doe</span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
